@@ -40,4 +40,4 @@ con.connect(async (err) => {
 });
 
 // exit after few seconsds
-new Promise(resolve => setTimeout(() => {process.exit()}, 5000));
+new Promise(resolve => setTimeout(() => {process.exit()}, process.env.KILL_PROCESS_AFTER_X_SEC));
