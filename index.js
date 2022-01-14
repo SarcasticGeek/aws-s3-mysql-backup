@@ -16,28 +16,28 @@ var s3 = new AWS.S3({
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
 });
 
-con.connect(function(err) {
+con.connect(async (err) => {
   if (err) console.log(err);
-  con.query("show databases", function (err, result, fields) {
+  await con.query("show databases", async (err, result, fields) => {
     if (err) console.log(err);
     let today = new Date().toISOString().substring(0, 10);
-    result.forEach(database => {
-      exec(`mysqldump ${database.Database} -u ${process.env.DB_USER} --password=${process.env.DB_PASS} | gzip > ./files/${today}-${database.Database}.sql.gz`)
-      fs.readFile(`./files/${today}-${database.Database}.sql.gz`, (err, data) => {
-        if (err) console.log(err);
-        let params = {
+    await result.forEach(async database => {
+      await exec(`mysqldump ${database.Database} -u ${process.env.DB_USER} --password=${process.env.DB_PASS} | gzip > ./files/${today}-${database.Database}.sql.gz`)
+      let fileContent = await fs.readFileSync(`./files/${today}-${database.Database}.sql.gz`);
+      try {
+        const stored = await s3.upload({
           Bucket: process.env.S3_REPO,
           Key: `${today}-${database.Database}.sql.gz`,
-          Body: data
-          }
-        s3.upload(params, function(s3Err, data) {
-            if (s3Err) console.log(s3Err);
-            console.log(`File uploaded successfully at ${data.Location}`)
-            exec(`rm ./files/${today}-${database.Database}.sql.gz`)
-        });
-       });
+          Body: fileContent
+          }).promise()
+          console.log(`File uploaded successfully at ${stored.Location}`)
+      } catch (err) {
+        console.log(err)
+      }
+      await exec(`rm ./files/${today}-${database.Database}.sql.gz`)
     });
-    process.exit();
   });
 });
 
+// exit after few seconsds
+new Promise(resolve => setTimeout(() => {process.exit()}, 5000));
