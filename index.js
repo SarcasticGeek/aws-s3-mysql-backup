@@ -22,7 +22,7 @@ con.connect(async (err) => {
     if (err) console.log(err);
     let today = new Date().toISOString().substring(0, 10);
     await result.forEach(async database => {
-      await exec(`mysqldump ${database.Database} -h ${process.env.DB_HOST} -u ${process.env.DB_USER} --password=${process.env.DB_PASS} | gzip > ./files/${today}-${database.Database}.sql.gz`)
+      await execPromise(`mysqldump ${database.Database} -h ${process.env.DB_HOST} -u ${process.env.DB_USER} --password=${process.env.DB_PASS} | gzip > ./files/${today}-${database.Database}.sql.gz`)
       let fileContent = await fs.readFileSync(`./files/${today}-${database.Database}.sql.gz`);
       try {
         const stored = await s3.upload({
@@ -34,10 +34,24 @@ con.connect(async (err) => {
       } catch (err) {
         console.log(err)
       }
-      await exec(`rm ./files/${today}-${database.Database}.sql.gz`)
+      await execPromise(`rm ./files/${today}-${database.Database}.sql.gz`)
     });
   });
 });
 
 // exit after few seconsds
 new Promise(resolve => setTimeout(() => {process.exit()}, process.env.KILL_PROCESS_AFTER_X_SEC));
+
+
+function execPromise(command) {
+  return new Promise(function(resolve, reject) {
+      exec(command, (error, stdout, stderr) => {
+          if (error) {
+              reject(error);
+              return;
+          }
+
+          resolve(stdout.trim());
+      });
+  });
+}
