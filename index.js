@@ -22,7 +22,7 @@ con.connect(async (err) => {
     if (err) console.log(err);
     let today = new Date().toISOString().substring(0, 10);
     await result.forEach(async database => {
-      await exec(`mysqldump ${database.Database} -u ${process.env.DB_USER} --password=${process.env.DB_PASS} | gzip > ./files/${today}-${database.Database}.sql.gz`)
+      await exec(`mysqldump ${database.Database} -h ${process.env.DB_HOST} -u ${process.env.DB_USER} --password=${process.env.DB_PASS} | gzip > ./files/${today}-${database.Database}.sql.gz`)
       let fileContent = await fs.readFileSync(`./files/${today}-${database.Database}.sql.gz`);
       try {
         const stored = await s3.upload({
